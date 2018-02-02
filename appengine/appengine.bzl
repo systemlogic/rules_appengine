@@ -223,7 +223,7 @@ appengine_war_base = rule(
             default = Label("@com_google_appengine_java//:sdk"),
         ),
         "_appengine_deps": attr.label_list(
-            default = [Label("@com_google_appengine_java//:api")],
+            default = [],
         ),
         "jars": attr.label_list(
             allow_files = jar_filetype,
