@@ -16,7 +16,7 @@
 For now, it only support bundling a WebApp and running locally.
 
 To create a WebApp for Google AppEngine, add the rules:
-appengine_war(
+java_war(
   name = "MyWebApp",
   # Jars to use for the classpath in the webapp.
   jars = ["//java/com/google/examples/mywebapp:java"],
@@ -56,7 +56,7 @@ java_library(
   resources = ["..."],
 )
 
-appengine_war(
+java_war(
   name = "MyWebApp",
   jars = [":libMyWebApp"],
   data = ["..."],
@@ -239,20 +239,70 @@ appengine_war_base = rule(
     },
 )
 
-def java_war(name, data=[], data_path=None, **kwargs):
-  """Convenience macro to call appengine_war with Java sources rather than jar.
-  """
-  native.java_library(name = "lib%s" % name, **kwargs)
-  appengine_war(name = name,
-                jars = ["lib%s" % name],
-                data=data,
-                data_path=data_path)
+appengine_ear_base = rule(
+    _war_impl,
+    attrs = {
+        "_java": attr.label(
+            default = Label("@bazel_tools//tools/jdk:java"),
+            single_file = True,
+        ),
+        "_zipper": attr.label(
+            default = Label("@bazel_tools//tools/zip:zipper"),
+            single_file = True,
+        ),
+        "_runner_template": attr.label(
+            default = Label("//appengine:runner_template"),
+            single_file = True,
+        ),
+        "_deploy_template": attr.label(
+            default = Label("//appengine:deploy_template"),
+            single_file = True,
+        ),
+        "_appengine_sdk": attr.label(
+            default = Label("@com_google_appengine_java//:sdk"),
+        ),
+        "_appengine_deps": attr.label_list(
+            default = [],
+        ),
+        "jars": attr.label_list(
+            allow_files = jar_filetype,
+            mandatory = True,
+        ),
+        "data": attr.label_list(allow_files = True),
+        "data_path": attr.string(),
+    },
+    executable = True,
+    outputs = {
+        "war": "%{name}.ear",
+        "deploy_sh": "%{name}_deploy.sh",
+    },
+)
 
-def appengine_war(name, jars, data, data_path, testonly = 0):
+
+def java_war(name, jars, data, data_path, testonly = 0):
   """Convenience macro that builds the war and offers an executable
      target to deploy on Google app engine.
   """
   appengine_war_base(
+      name = name,
+      jars = jars,
+      data = data,
+      data_path = data_path,
+      testonly = testonly,
+  )
+  # Create the executable rule to deploy
+  native.sh_binary(
+      name = "%s.deploy" % name,
+      srcs = ["%s_deploy.sh" % name],
+      data = [name],
+      testonly = testonly,
+  )
+
+def java_ear(name, jars, data, data_path, testonly = 0):
+  """Convenience macro that builds the war and offers an executable
+     target to deploy on Google app engine.
+  """
+  appengine_ear_base(
       name = name,
       jars = jars,
       data = data,

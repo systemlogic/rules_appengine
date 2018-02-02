@@ -1,6 +1,6 @@
-load("//appengine:appengine.bzl", "appengine_war")
+load("//appengine:appengine.bzl", "java_ear")
 
-appengine_war(
+java_ear(
     name = "examples",
     data = ["//examples/webapp"],
     data_path = "/examples/webapp",
